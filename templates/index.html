@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CineAI — MF vs NCF Deep Learning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #f8fafc;
+  --surface:  #ffffff;
+  --card:     #ffffff;
+  --card2:    #f1f5f9;
+  --border:   rgba(15, 23, 42, 0.08);
+  --border2:  rgba(15, 23, 42, 0.14);
+  --mf:       #0d9488;    /* MF accent — premium teal */
+  --mf-dim:   rgba(13, 148, 136, 0.08);
+  --ncf:      #6d28d9;    /* NCF accent — premium purple */
+  --ncf-dim:  rgba(109, 40, 217, 0.08);
+  --blue:     #0284c7;
+  --green:    #16a34a;
+  --orange:   #ea580c;
+  --text:     #0f172a;
+  --muted:    #475569;
+  --muted2:   #94a3b8;
+  --r:        10px;
+  --r2:       18px;
+  --font-h:   'Plus Jakarta Sans', sans-serif;
+  --font-b:   'Inter', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--text);
+  font-family: var(--font-b); font-size: 14px; line-height: 1.6;
+  overflow-x: hidden;
+}
+body::before {
+  content:''; position:fixed; inset:0;
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 10%, rgba(109,40,217,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 90%, rgba(13, 148, 136,0.03) 0%, transparent 60%);
+  pointer-events:none; z-index:0;
+}
+::-webkit-scrollbar{width:6px;height:6px} ::-webkit-scrollbar-track{background:var(--bg)} ::-webkit-scrollbar-thumb{background:var(--muted2);border-radius:3px} ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+/* ── Layout ── */
+.layout { display:flex; min-height:100vh; position:relative; z-index:1; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width:230px; flex-shrink:0;
+  background:#ffffff; border-right:1px solid var(--border);
+  display:flex; flex-direction:column; padding:22px 16px;
+  position:fixed; top:0; left:0; bottom:0; z-index:100;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.02);
+}
+.logo { display:flex; align-items:center; gap:10px; margin-bottom:32px; padding:0 4px; }
+.logo-mark {
+  width:38px; height:38px; border-radius:9px;
+  background:linear-gradient(135deg, var(--mf) 0%, var(--ncf) 100%);
+  display:flex; align-items:center; justify-content:center; font-size:18px;
+  color:#ffffff;
+}
+.logo-name { font-family:var(--font-h); font-size:18px; font-weight:800; }
+.logo-name b { color:var(--mf); }
+
+.nav-section { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--muted); text-transform:uppercase; padding:0 8px; margin:0 0 6px; }
+.nav { display:flex; flex-direction:column; gap:3px; margin-bottom:24px; }
+.nav-item {
+  display:flex; align-items:center; gap:10px;
+  padding:9px 10px; border-radius:8px; cursor:pointer;
+  transition:all .18s; font-size:13px; font-weight:500;
+  color:var(--muted); border:1px solid transparent;
+}
+.nav-item:hover { background:rgba(0,0,0,0.03); color:var(--text); }
+.nav-item.active { background:var(--mf-dim); color:var(--mf); border-color:rgba(13, 148, 136, 0.15); }
+.nav-item.active .ni { color:var(--mf); }
+.nav-item.ncf-active { background:var(--ncf-dim); color:var(--ncf); border-color:rgba(109, 40, 217, 0.15); }
+.ni { font-size:16px; width:20px; text-align:center; }
+
+/* Model badges in sidebar */
+.model-pills { display:flex; flex-direction:column; gap:8px; margin-top:auto; }
+.mpill {
+  border-radius:10px; padding:12px 14px;
+  display:flex; align-items:center; gap:10px;
+}
+.mpill.mf  { background:var(--mf-dim); border:1px solid rgba(13, 148, 136, 0.12); }
+.mpill.ncf { background:var(--ncf-dim); border:1px solid rgba(109, 40, 217, 0.12); }
+.mpill-dot { width:7px; height:7px; border-radius:50%; flex-shrink:0; }
+.mpill.mf  .mpill-dot { background:var(--mf); }
+.mpill.ncf .mpill-dot { background:var(--ncf); }
+.mpill-info { flex:1; min-width:0; }
+.mpill-name { font-family:var(--font-h); font-size:12px; font-weight:700; }
+.mpill.mf  .mpill-name { color:var(--mf); }
+.mpill.ncf .mpill-name { color:var(--ncf); }
+.mpill-desc { font-size:10px; color:var(--muted); }
+.mpill-status { font-size:10px; font-weight:600; }
+
+/* ── Main ── */
+.main { margin-left:230px; flex:1; display:flex; flex-direction:column; }
+.topbar {
+  padding:16px 32px; border-bottom:1px solid var(--border);
+  display:flex; align-items:center; gap:14px;
+  background:rgba(255,255,255,0.85); backdrop-filter:blur(20px);
+  position:sticky; top:0; z-index:50;
+}
+.topbar-title { font-family:var(--font-h); font-size:15px; font-weight:700; flex:1; }
+.topbar-title small { color:var(--muted); font-size:11px; font-weight:400; margin-left:8px; }
+.dot-live { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 0 3px rgba(22,163,74,.2); animation:pulse 2s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.4} }
+.chip { background:var(--card2); border:1px solid var(--border); border-radius:99px; padding:4px 12px; font-size:11px; color:var(--muted); }
+
+.content { padding:28px 32px; flex:1; }
+.section { display:none; }
+.section.active { display:block; }
+
+/* ── Model toggle ── */
+.model-toggle {
+  display:inline-flex; gap:3px;
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:10px; padding:3px; margin-bottom:20px;
+}
+.mt-btn {
+  padding:7px 18px; border-radius:7px;
+  font-family:var(--font-h); font-size:12px; font-weight:700;
+  cursor:pointer; border:none; background:none;
+  transition:all .18s; color:var(--muted);
+}
+.mt-btn.active-mf  { background:var(--mf-dim);  color:var(--mf);  border:1px solid rgba(13, 148, 136, 0.15); }
+.mt-btn.active-ncf { background:var(--ncf-dim); color:var(--ncf); border:1px solid rgba(109, 40, 217, 0.15); }
+.mt-btn:hover:not(.active-mf):not(.active-ncf) { color:var(--text); }
+
+/* ── Page header ── */
+.pg-title { font-family:var(--font-h); font-size:26px; font-weight:800; letter-spacing:-.5px; margin-bottom:4px; }
+.pg-title em { font-style:normal; }
+.pg-title em.mf  { color:var(--mf); }
+.pg-title em.ncf { color:var(--ncf); }
+.pg-sub { color:var(--muted); font-size:13px; margin-bottom:24px; }
+
+/* ── Cards ── */
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r2); padding:22px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.01);
+}
+.card-title {
+  font-family:var(--font-h); font-size:11px; font-weight:700;
+  text-transform:uppercase; letter-spacing:1.5px;
+  color:var(--muted); margin-bottom:14px;
+  display:flex; align-items:center; gap:7px;
+}
+.card-title::before { content:''; width:3px; height:13px; background:var(--mf); border-radius:2px; }
+.card-title.ncf-bar::before { background:var(--ncf); }
+
+/* ── Stats grid ── */
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+.stat-card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r2); padding:18px 20px; position:relative; overflow:hidden;
+  transition:border-color .2s;
+  box-shadow:0 4px 20px rgba(0,0,0,0.01);
+}
+.stat-card:hover { border-color:var(--border2); }
+.stat-glow {
+  position:absolute; inset:0;
+  background:radial-gradient(ellipse at top right, var(--g,rgba(13,148,136,.06)) 0%, transparent 65%);
+}
+.stat-num { font-family:var(--font-h); font-size:30px; font-weight:800; line-height:1; margin-bottom:4px; }
+.stat-lbl { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:1px; }
+.stat-ico { position:absolute; top:16px; right:18px; font-size:20px; opacity:.2; }
+
+/* ── Grid ── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+.grid-12 { display:grid; grid-template-columns:280px 1fr; gap:18px; }
+
+/* ── Search box ── */
+.search-box {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:var(--r2); padding:18px 22px;
+  display:flex; align-items:flex-end; flex-wrap:wrap; gap:12px;
+  margin-bottom:22px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.01);
+}
+.inp-g { display:flex; flex-direction:column; gap:5px; }
+.inp-g label { font-size:9px; font-weight:700; letter-spacing:2px; color:var(--muted); text-transform:uppercase; }
+.inp-g input {
+  background:var(--bg); border:1px solid var(--border2); border-radius:8px;
+  color:var(--text); padding:9px 13px; font-family:var(--font-h); font-size:16px; font-weight:700;
+  width:110px; outline:none; transition:border-color .18s;
+}
+.inp-g input:focus { border-color:var(--mf); }
+
+/* ── Buttons ── */
+.btn {
+  padding:10px 22px; border-radius:8px;
+  font-family:var(--font-h); font-size:13px; font-weight:700;
+  cursor:pointer; border:none; transition:all .18s;
+  display:inline-flex; align-items:center; gap:7px;
+}
+.btn-mf  { background:var(--mf);  color:#ffffff; }
+.btn-mf:hover  { background:#0b7a70; transform:translateY(-1px); box-shadow:0 4px 18px rgba(13,148,136,.25); }
+.btn-ncf { background:var(--ncf); color:#ffffff; }
+.btn-ncf:hover { background:#5b21b6; transform:translateY(-1px); box-shadow:0 4px 18px rgba(109,40,217,.25); }
+.btn-ghost { background:transparent; color:var(--text); border:1px solid var(--border2); }
+.btn-ghost:hover { border-color:var(--blue); color:var(--blue); background:rgba(2,132,199,0.04); }
+.btn-compare { background:linear-gradient(135deg,var(--mf),var(--ncf)); color:#ffffff; }
+.btn-compare:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 4px 18px rgba(109,40,217,.18); }
+
+/* ── Movie grid ── */
+.movie-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:13px; }
+.movie-card {
+  background:#ffffff; border:1px solid var(--border);
+  border-radius:var(--r2); padding:18px; cursor:pointer;
+  transition:all .22s; position:relative; overflow:hidden;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.01);
+}
+.movie-card::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:2px;
+  opacity:0; transition:.22s;
+}
+.movie-card.mf-card::before  { background:linear-gradient(90deg,var(--mf),var(--blue)); }
+.movie-card.ncf-card::before { background:linear-gradient(90deg,var(--ncf),var(--blue)); }
+.movie-card:hover { border-color:rgba(0,0,0,.1); transform:translateY(-3px); box-shadow:0 10px 30px rgba(0,0,0,.06); }
+.movie-card:hover::before { opacity:1; }
+.movie-rank { font-family:var(--font-h); font-size:10px; font-weight:700; color:var(--muted); letter-spacing:1px; margin-bottom:10px; }
+.movie-emoji { font-size:26px; margin-bottom:9px; }
+.movie-title { font-family:var(--font-h); font-size:13px; font-weight:700; line-height:1.3; margin-bottom:9px; }
+.movie-score { display:flex; align-items:center; gap:7px; margin-bottom:9px; }
+.score-bar-wrap { flex:1; height:3px; background:rgba(0,0,0,.05); border-radius:2px; overflow:hidden; }
+.score-bar { height:100%; border-radius:2px; transition:width .8s cubic-bezier(.22,1,.36,1); }
+.score-val { font-family:var(--font-h); font-size:12px; font-weight:700; }
+.genre-tags { display:flex; flex-wrap:wrap; gap:4px; }
+.genre-tag { font-size:9px; padding:2px 7px; border-radius:99px; background:rgba(0,0,0,.03); border:1px solid var(--border); color:var(--muted); }
+
+/* ── Model label badge on cards ── */
+.model-label {
+  display:inline-flex; align-items:center; gap:5px;
+  font-size:9px; font-weight:700; padding:2px 8px; border-radius:99px;
+  margin-bottom:10px;
+}
+.model-label.mf  { background:var(--mf-dim);  color:var(--mf);  border:1px solid rgba(13,148,136,.15); }
+.model-label.ncf { background:var(--ncf-dim); color:var(--ncf); border:1px solid rgba(109,40,217,.15); }
+
+/* ── Compare columns ── */
+.compare-cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.compare-header {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:13px; padding-bottom:12px; border-bottom:1px solid var(--border);
+}
+.compare-header h3 { font-family:var(--font-h); font-size:14px; font-weight:700; }
+.compare-list { display:flex; flex-direction:column; gap:8px; }
+.compare-item {
+  display:flex; align-items:center; gap:10px;
+  padding:10px 13px; background:#ffffff; border:1px solid var(--border); border-radius:10px;
+}
+.ci-rank { font-family:var(--font-h); font-size:16px; font-weight:800; color:var(--muted2); min-width:22px; }
+.ci-emoji { font-size:18px; }
+.ci-info { flex:1; min-width:0; }
+.ci-title { font-size:12px; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ci-genres { font-size:10px; color:var(--muted); }
+.ci-score { font-family:var(--font-h); font-size:13px; font-weight:700; }
+
+/* ── Similar list ── */
+.sim-item {
+  display:flex; align-items:center; gap:12px;
+  background:#ffffff; border:1px solid var(--border); border-radius:10px;
+  padding:12px 16px; transition:border-color .18s;
+}
+.sim-item:hover { border-color:var(--border2); }
+.sim-rank { font-family:var(--font-h); font-size:16px; font-weight:800; color:var(--muted2); min-width:24px; }
+.sim-info { flex:1; }
+.sim-title { font-size:13px; font-weight:500; margin-bottom:2px; }
+.sim-genres { font-size:11px; color:var(--muted); }
+.sim-score { text-align:right; }
+.sim-pct { font-family:var(--font-h); font-size:14px; font-weight:700; }
+.sim-bar { margin-top:4px; height:3px; width:60px; background:rgba(0,0,0,.04); border-radius:2px; }
+.sim-bar-fill { height:100%; border-radius:2px; transition:width .7s ease; }
+
+/* ── Metrics table ── */
+.metrics-table { width:100%; border-collapse:separate; border-spacing:0; }
+.metrics-table th {
+  padding:9px 14px; font-size:10px; color:var(--muted);
+  text-transform:uppercase; letter-spacing:1px;
+  border-bottom:1px solid var(--border); text-align:left;
+}
+.metrics-table td { padding:12px 14px; border-bottom:1px solid var(--border); font-size:13px; }
+.metrics-table tr:last-child td { border-bottom:none; }
+.metrics-table tr:hover td { background:rgba(0,0,0,.01); }
+.badge-mf  { display:inline-flex;align-items:center;gap:6px;font-family:var(--font-h);font-size:12px;font-weight:700; }
+.badge-ncf { display:inline-flex;align-items:center;gap:6px;font-family:var(--font-h);font-size:12px;font-weight:700; }
+.dot { width:8px; height:8px; border-radius:50%; }
+
+/* ── Info box ── */
+.infobox {
+  background:rgba(13,148,136,.04); border:1px solid rgba(13,148,136,.15);
+  border-radius:var(--r2); padding:16px 18px; margin-top:16px;
+}
+.infobox.ncf-box { background:rgba(109,40,217,.04); border-color:rgba(109,40,217,.15); }
+.infobox-title { font-family:var(--font-h); font-size:12px; font-weight:700; margin-bottom:8px; }
+.infobox.ncf-box .infobox-title { color:var(--ncf); }
+.infobox:not(.ncf-box) .infobox-title { color:var(--mf); }
+
+/* ── Empty & Loading ── */
+.empty { text-align:center; padding:50px 20px; color:var(--muted); }
+.empty-icon { font-size:40px; margin-bottom:14px; opacity:.25; }
+.empty h3 { font-family:var(--font-h); font-size:17px; margin-bottom:6px; color:var(--text); }
+.loader { display:flex; flex-direction:column; align-items:center; gap:14px; padding:50px; color:var(--muted); }
+.spinner { width:32px; height:32px; border:2px solid var(--border); border-top-color:var(--mf); border-radius:50%; animation:spin .7s linear infinite; }
+.spinner.ncf-spin { border-top-color:var(--ncf); }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ── Toast ── */
+.toasts { position:fixed; bottom:24px; right:24px; z-index:999; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background:#ffffff; border:1px solid var(--border2);
+  border-left:3px solid var(--mf); border-radius:var(--r);
+  padding:11px 16px; font-size:12px; max-width:300px;
+  box-shadow:0 8px 32px rgba(0,0,0,.06);
+  animation:slideIn .25s ease; display:flex; align-items:center; gap:9px;
+  color:var(--text);
+}
+.toast.t-ncf { border-left-color:var(--ncf); }
+.toast.t-err { border-left-color:#f87171; }
+@keyframes slideIn { from{transform:translateX(16px);opacity:0} to{transform:translateX(0);opacity:1} }
+
+/* ── Stagger ── */
+.stagger > * { animation:slideUp .35s ease forwards; opacity:0; }
+.stagger > *:nth-child(1){animation-delay:.04s}
+.stagger > *:nth-child(2){animation-delay:.08s}
+.stagger > *:nth-child(3){animation-delay:.12s}
+.stagger > *:nth-child(4){animation-delay:.16s}
+.stagger > *:nth-child(5){animation-delay:.20s}
+.stagger > *:nth-child(6){animation-delay:.24s}
+.stagger > *:nth-child(7){animation-delay:.28s}
+.stagger > *:nth-child(8){animation-delay:.32s}
+.stagger > *:nth-child(9){animation-delay:.36s}
+.stagger > *:nth-child(10){animation-delay:.40s}
+@keyframes slideUp { from{transform:translateY(12px);opacity:0}to{opacity:1;transform:translateY(0)} }
+
+/* ── Overlap badge ── */
+.overlap-badge {
+  display:inline-flex; align-items:center; gap:6px;
+  background:rgba(2,132,199,0.08); border:1px solid rgba(2,132,199,0.15);
+  border-radius:99px; padding:4px 12px; font-size:11px; color:var(--blue);
+  font-family:var(--font-h); font-weight:700;
+}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">🎬</div>
+    <div class="logo-name">Cine<b>AI</b></div>
+  </div>
+
+  <div class="nav-section">Navigate</div>
+  <nav class="nav">
+    <div class="nav-item active" data-sec="dashboard">
+      <span class="ni">⬡</span> Dashboard
+    </div>
+    <div class="nav-item" data-sec="recommend">
+      <span class="ni">✦</span> Gợi ý phim
+    </div>
+    <div class="nav-item" data-sec="compare">
+      <span class="ni">⇌</span> So sánh MF vs NCF
+    </div>
+    <div class="nav-item" data-sec="similar">
+      <span class="ni">◈</span> Phim tương tự
+    </div>
+    <div class="nav-item" data-sec="analysis">
+      <span class="ni">◎</span> Phân tích
+    </div>
+  </nav>
+
+  <div class="model-pills">
+    <div class="mpill mf">
+      <div class="mpill-dot"></div>
+      <div class="mpill-info">
+        <div class="mpill-name">Matrix Factorization</div>
+        <div class="mpill-desc">SGD · k=50 factors</div>
+      </div>
+      <div class="mpill-status" style="color:var(--green)">✓</div>
+    </div>
+    <div class="mpill ncf">
+      <div class="mpill-dot"></div>
+      <div class="mpill-info">
+        <div class="mpill-name">Neural CF (PyTorch)</div>
+        <div class="mpill-desc">NeuMF · GMF + MLP</div>
+      </div>
+      <div class="mpill-status" id="ncfSideStatus" style="color:var(--muted)">…</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+  <div class="topbar">
+    <div class="topbar-title">
+      CineAI — Deep Learning Recommender
+      <small>MF + NCF (PyTorch NeuMF)</small>
+    </div>
+    <div class="dot-live"></div>
+    <div class="chip" id="headerChip">Loading...</div>
+  </div>
+
+  <div class="content">
+
+    <!-- ══ DASHBOARD ══ -->
+    <section class="section active" id="sec-dashboard">
+      <div class="pg-title">Tổng quan <em class="mf">Hệ thống</em></div>
+      <p class="pg-sub">Hai mô hình deep learning đang chạy song song</p>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-glow"></div>
+          <div class="stat-num" id="dUsers">—</div>
+          <div class="stat-lbl">Người dùng</div>
+          <div class="stat-ico">👤</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-glow" style="--g:rgba(56,189,248,.06)"></div>
+          <div class="stat-num" id="dItems">—</div>
+          <div class="stat-lbl">Phim</div>
+          <div class="stat-ico">🎞</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-glow" style="--g:rgba(167,139,250,.06)"></div>
+          <div class="stat-num" id="dRatings">—</div>
+          <div class="stat-lbl">Đánh giá</div>
+          <div class="stat-ico">⭐</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-bottom:18px">
+        <div class="card">
+          <div class="card-title">Matrix Factorization</div>
+          <div id="mfInfo" style="font-size:12px;color:var(--muted)">Đang tải...</div>
+          <div class="infobox" style="margin-top:14px">
+            <div class="infobox-title">Công thức dự đoán</div>
+            <div style="font-family:monospace;font-size:12px;color:var(--text)">R̂[u,i] = μ + b_u + b_i + <b style="color:var(--mf)">U[u]·V[i]</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title ncf-bar">Neural CF (NeuMF)</div>
+          <div id="ncfInfo" style="font-size:12px;color:var(--muted)">Đang tải...</div>
+          <div class="infobox ncf-box" style="margin-top:14px">
+            <div class="infobox-title">Kiến trúc NeuMF</div>
+            <div style="font-size:11px;color:var(--text);line-height:1.8">
+              GMF: <span style="color:var(--mf)">emb_u(32) ⊙ emb_i(32)</span> &nbsp;·&nbsp;
+              MLP: <span style="color:var(--ncf)">64→32→16→8</span> (ReLU & Dropout)<br>
+              Output: concat(GMF, MLP) [40] → Linear → Sigmoid → [0,1]
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Thử nhanh — Gợi ý cho User</div>
+        <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+          <input type="number" id="quickUid" placeholder="User ID" min="1"
+            style="background:var(--bg);border:1px solid var(--border2);border-radius:8px;color:var(--text);padding:9px 13px;font-family:var(--font-h);font-size:16px;font-weight:700;width:120px;outline:none"
+            onfocus="this.style.borderColor='var(--mf)'" onblur="this.style.borderColor='var(--border2)'">
+          <button class="btn btn-mf" onclick="quickRec('mf')">✦ MF</button>
+          <button class="btn btn-ncf" onclick="quickRec('ncf')">◈ NCF</button>
+          <button class="btn btn-compare" onclick="gotoCompare()">⇌ So sánh</button>
+        </div>
+        <div id="quickResult"></div>
+      </div>
+
+      <div class="card" style="margin-top:16px">
+        <div class="card-title">User mẫu</div>
+        <div id="sampleUsers" style="display:flex;flex-wrap:wrap;gap:7px">
+          <div class="loader" style="padding:10px"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ RECOMMEND ══ -->
+    <section class="section" id="sec-recommend">
+      <div class="pg-title">Gợi ý <em class="mf">Cá nhân hóa</em></div>
+      <p class="pg-sub">Chọn model và nhập User ID để xem Top-N phim gợi ý</p>
+
+      <div class="model-toggle">
+        <button class="mt-btn active-mf" id="rec-toggle-mf" onclick="setRecModel('mf')">✦ MF</button>
+        <button class="mt-btn" id="rec-toggle-ncf" onclick="setRecModel('ncf')">◈ NCF (PyTorch)</button>
+      </div>
+
+      <div class="search-box">
+        <div class="inp-g">
+          <label>User ID</label>
+          <input type="number" id="recUid" placeholder="1" min="1">
+        </div>
+        <div class="inp-g">
+          <label>Top N</label>
+          <input type="number" id="recN" value="10" min="1" max="50" style="width:80px">
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+          <button class="btn btn-ghost" onclick="randUser()">⚄ Ngẫu nhiên</button>
+          <button class="btn btn-mf" id="recBtn" onclick="doRecommend()">✦ Gợi ý</button>
+        </div>
+      </div>
+
+      <div id="recResults">
+        <div class="empty">
+          <div class="empty-icon">✦</div>
+          <h3>Nhập User ID để bắt đầu</h3>
+          <p>Hệ thống dự đoán rating cho tất cả phim chưa xem rồi trả về top-N</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ COMPARE ══ -->
+    <section class="section" id="sec-compare">
+      <div class="pg-title">So sánh <em class="mf">MF</em> vs <em class="ncf">NCF</em></div>
+      <p class="pg-sub">Chạy song song 2 model, xem sự khác biệt trong gợi ý</p>
+
+      <div class="search-box">
+        <div class="inp-g">
+          <label>User ID</label>
+          <input type="number" id="cmpUid" placeholder="1" min="1">
+        </div>
+        <div class="inp-g">
+          <label>Top N</label>
+          <input type="number" id="cmpN" value="5" min="1" max="20" style="width:80px">
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+          <button class="btn btn-ghost" onclick="randUserCmp()">⚄ Ngẫu nhiên</button>
+          <button class="btn btn-compare" onclick="doCompare()">⇌ So sánh ngay</button>
+        </div>
+      </div>
+
+      <div id="cmpResults">
+        <div class="empty">
+          <div class="empty-icon">⇌</div>
+          <h3>Nhập User ID để so sánh</h3>
+          <p>Xem MF và NCF gợi ý những phim khác nhau như thế nào</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ SIMILAR ══ -->
+    <section class="section" id="sec-similar">
+      <div class="pg-title">Phim <em class="ncf">Tương tự</em></div>
+      <p class="pg-sub">Cosine similarity trong không gian latent — MF dùng V matrix, NCF dùng GMF embedding</p>
+
+      <div class="model-toggle">
+        <button class="mt-btn active-mf" id="sim-toggle-mf" onclick="setSimModel('mf')">✦ MF Latent Space</button>
+        <button class="mt-btn" id="sim-toggle-ncf" onclick="setSimModel('ncf')">◈ NCF GMF Space</button>
+      </div>
+
+      <div class="search-box">
+        <div class="inp-g">
+          <label>Movie ID</label>
+          <input type="number" id="simMid" placeholder="1" min="1">
+        </div>
+        <div class="inp-g">
+          <label>Top N</label>
+          <input type="number" id="simN" value="8" min="1" max="20" style="width:80px">
+        </div>
+        <div style="margin-left:auto;display:flex;gap:8px;align-items:flex-end">
+          <button class="btn btn-ghost" onclick="randMovie()">⚄ Ngẫu nhiên</button>
+          <button class="btn btn-mf" id="simBtn" onclick="doSimilar()">◈ Tìm tương tự</button>
+        </div>
+      </div>
+
+      <div id="simResults">
+        <div class="empty">
+          <div class="empty-icon">◈</div>
+          <h3>Nhập Movie ID để tìm phim tương tự</h3>
+          <p>Dựa trên cosine similarity của item embedding vectors</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ ANALYSIS ══ -->
+    <section class="section" id="sec-analysis">
+      <div class="pg-title">Phân tích <em class="ncf">Kiến trúc</em></div>
+      <p class="pg-sub">So sánh chi tiết 2 thuật toán deep learning</p>
+
+      <div class="card" style="margin-bottom:18px">
+        <div class="card-title">Hiệu suất thực tế của mô hình (MovieLens 1M)</div>
+        <table class="metrics-table">
+          <thead>
+            <tr>
+              <th>Mô hình</th>
+              <th>Loại dữ liệu (Feedback)</th>
+              <th>Loss Function</th>
+              <th>Metric đánh giá</th>
+              <th>Giá trị kì vọng</th>
+              <th>Tốc độ suy luận</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="badge-mf"><span class="dot" style="background:var(--mf)"></span>Matrix Factorization (MF)</span></td>
+              <td style="color:var(--muted);font-size:12px">Explicit (Rating 1-5)</td>
+              <td>Mean Squared Error (MSE)</td>
+              <td>RMSE, MAE</td>
+              <td><b style="color:var(--mf)">RMSE ~0.88, MAE ~0.68</b></td>
+              <td style="color:var(--green)">Cực nhanh (~0.1ms)</td>
+            </tr>
+            <tr>
+              <td><span class="badge-ncf"><span class="dot" style="background:var(--ncf)"></span>Neural CF (NeuMF)</span></td>
+              <td style="color:var(--muted);font-size:12px">Implicit (Tương tác 0/1)</td>
+              <td>Binary Cross-Entropy (BCE)</td>
+              <td>HR@10, NDCG@10</td>
+              <td><b style="color:var(--ncf)">HR@10 ~0.70, NDCG@10 ~0.42</b></td>
+              <td style="color:var(--orange)">Trung bình (~5-20ms)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-title">Matrix Factorization</div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.9">
+            <div style="background:var(--bg);border-radius:8px;padding:13px;font-family:monospace;font-size:11px;margin-bottom:12px;color:var(--text)">
+              R̂[u,i] = μ + b_u + b_i + <b style="color:var(--mf)">U[u]·V[i]ᵀ</b>
+            </div>
+            <p>• <b style="color:var(--text)">μ</b> — global mean (≈3.5)</p>
+            <p>• <b style="color:var(--text)">b_u, b_i</b> — user/item bias</p>
+            <p>• <b style="color:var(--mf)">U[u]</b> — user latent vector (50D)</p>
+            <p>• <b style="color:var(--mf)">V[i]</b> — item latent vector (50D)</p>
+            <p style="margin-top:10px">Optimizer: SGD · Reg: L2 (λ=0.02)</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title ncf-bar">Kiến trúc NeuMF (Neural Collaborative Filtering)</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <div style="background:var(--ncf-dim);border:1px solid rgba(109,40,217,.15);border-radius:8px;padding:9px;text-align:center;font-size:11px">
+              <span style="color:var(--text)">Output [0,1] = σ(Linear(40→1)) (Xác suất tương tác)</span>
+            </div>
+            <div style="background:rgba(56,189,248,.08);border:1px solid rgba(56,189,248,.2);border-radius:8px;padding:7px;text-align:center;font-size:11px">
+              <span style="color:var(--blue)">Concat(GMF_out[32], MLP_out[8]) → 40D Vector</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <div style="background:var(--mf-dim);border:1px solid rgba(15,118,110,.12);border-radius:8px;padding:8px;text-align:center;font-size:10px">
+                <div style="color:var(--mf);font-weight:700">GMF Branch</div>
+                <div style="color:var(--muted)">Tích Hadamard (32D)</div>
+                <div style="font-size:9px;margin-top:2px">emb_u(32) ⊙ emb_i(32)</div>
+              </div>
+              <div style="background:var(--ncf-dim);border:1px solid rgba(109,40,217,.12);border-radius:8px;padding:8px;text-align:center;font-size:10px">
+                <div style="color:var(--ncf);font-weight:700">MLP Branch</div>
+                <div style="color:var(--muted)">Các lớp ẩn + ReLU + Dropout</div>
+                <div style="font-size:9px;margin-top:2px">64 → 32 → 16 → 8</div>
+              </div>
+            </div>
+            <div style="background:rgba(251,146,60,.08);border:1px solid rgba(251,146,60,.2);border-radius:8px;padding:7px;text-align:center;font-size:11px">
+              <span style="color:var(--orange)">User & Item Embeddings riêng biệt (Không chia sẻ weights)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /content -->
+</main>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  State
+// ═══════════════════════════════════════════════
+const $ = id => document.getElementById(id);
+let recModel = 'mf', simModel = 'mf';
+let sampleIds = [], sampleMovies = [];
+
+// ═══════════════════════════════════════════════
+//  Navigation
+// ═══════════════════════════════════════════════
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(x => x.classList.remove('active'));
+    el.classList.add('active');
+    $('sec-' + el.dataset.sec).classList.add('active');
+  });
+});
+
+function gotoCompare() {
+  const uid = $('quickUid').value;
+  if (uid) { $('cmpUid').value = uid; }
+  document.querySelector('[data-sec="compare"]').click();
+  if (uid) doCompare();
+}
+
+// ═══════════════════════════════════════════════
+//  Toast
+// ═══════════════════════════════════════════════
+function toast(msg, type='') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ═══════════════════════════════════════════════
+//  Model toggle
+// ═══════════════════════════════════════════════
+function setRecModel(m) {
+  recModel = m;
+  ['mf','ncf'].forEach(x => {
+    $(`rec-toggle-${x}`).className = 'mt-btn' + (x===m ? ` active-${x}` : '');
+  });
+  const btn = $('recBtn');
+  if (m === 'mf') { btn.className='btn btn-mf'; btn.textContent='✦ Gợi ý MF'; }
+  else             { btn.className='btn btn-ncf'; btn.textContent='◈ Gợi ý NCF'; }
+}
+function setSimModel(m) {
+  simModel = m;
+  ['mf','ncf'].forEach(x => {
+    $(`sim-toggle-${x}`).className = 'mt-btn' + (x===m ? ` active-${x}` : '');
+  });
+  const btn = $('simBtn');
+  if (m === 'mf') { btn.className='btn btn-mf'; btn.textContent='◈ Tìm (MF Space)'; }
+  else             { btn.className='btn btn-ncf'; btn.textContent='◈ Tìm (NCF Space)'; }
+}
+
+// ═══════════════════════════════════════════════
+//  Helpers
+// ═══════════════════════════════════════════════
+function fmt(n) { return n >= 1e4 ? (n/1e3).toFixed(1)+'K' : String(n); }
+function ratingColor(s) {
+  if (s >= 4.5) return 'var(--green)';
+  if (s >= 4.0) return 'var(--mf)';
+  if (s >= 3.5) return 'var(--blue)';
+  return 'var(--orange)';
+}
+function genreEmoji(g='') {
+  const gl = g.toLowerCase();
+  if (gl.includes('action'))    return '💥';
+  if (gl.includes('comedy'))    return '😄';
+  if (gl.includes('romance'))   return '💕';
+  if (gl.includes('thriller'))  return '🔪';
+  if (gl.includes('sci-fi'))    return '🚀';
+  if (gl.includes('horror'))    return '👻';
+  if (gl.includes('animation')) return '✨';
+  if (gl.includes('drama'))     return '🎭';
+  return '🎬';
+}
+function shortTitle(t, max=34) { return t.length > max ? t.slice(0,max-2)+'…' : t; }
+
+// ── Score helpers (MF: predicted_rating [1-5], NCF: interaction_prob [0-1]) ──
+// Phải khai báo ở scope ngoài để mọi function đều gọi được
+function getScore(m, mt) {
+  if (mt === 'ncf') return m.interaction_prob !== undefined ? m.interaction_prob : (m.predicted_rating||0);
+  return m.predicted_rating !== undefined ? m.predicted_rating : (m.interaction_prob||0);
+}
+function fmtScore(s, mt) {
+  if (mt === 'ncf') return (s * 100).toFixed(1) + '%';
+  return (typeof s === 'number') ? s.toFixed(4) : String(s);
+}
+function scoreColor(s, mt) {
+  if (mt === 'ncf') {
+    if (s >= 0.7) return 'var(--green)';
+    if (s >= 0.5) return 'var(--ncf)';
+    if (s >= 0.3) return 'var(--blue)';
+    return 'var(--orange)';
+  }
+  return ratingColor(s);
+}
+function scoreBarPct(s, mt) {
+  return mt === 'ncf' ? (s*100).toFixed(0) : ((s-1)/4*100).toFixed(0);
+}
+
+function movieCard(m, rank, modelType) {
+  const score    = getScore(m, modelType);
+  const barPct   = scoreBarPct(score, modelType);
+  const color    = scoreColor(score, modelType);
+  const barColor = modelType === 'ncf' ? 'var(--ncf)' : 'var(--mf)';
+  const genres = (m.genres||'').split('|').filter(Boolean);
+  const div = document.createElement('div');
+  div.className = `movie-card ${modelType}-card`;
+  div.innerHTML = `
+    <div class="movie-rank"># ${rank}</div>
+    <div class="movie-emoji">${genreEmoji(m.genres)}</div>
+    <div class="movie-title">${shortTitle(m.title)}</div>
+    <div class="movie-score">
+      <div class="score-bar-wrap">
+        <div class="score-bar" style="width:0%;background:${barColor}" data-w="${barPct}%"></div>
+      </div>
+      <div class="score-val" style="color:${color}">${fmtScore(score, modelType)}</div>
+    </div>
+    <div class="genre-tags">${genres.slice(0,3).map(g=>`<span class="genre-tag">${g}</span>`).join('')}</div>
+  `;
+  div.onclick = () => {
+    $('simMid').value = m.movie_id;
+    document.querySelector('[data-sec="similar"]').click();
+    doSimilar();
+  };
+  return div;
+}
+
+// ═══════════════════════════════════════════════
+//  Load stats
+// ═══════════════════════════════════════════════
+async function loadStats() {
+  try {
+    const r = await fetch('/stats');
+    const d = await r.json();
+    $('dUsers').textContent   = fmt(d.n_users);
+    $('dItems').textContent   = fmt(d.n_items);
+    $('dRatings').textContent = fmt(d.n_ratings);
+    $('headerChip').textContent = `${fmt(d.n_users)} users · ${fmt(d.n_items)} films`;
+
+    const mf = d.models.mf;
+    $('mfInfo').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div>Status: <b style="color:var(--green)">✓ Ready</b></div>
+        <div>Factors: <b style="color:var(--mf)">${mf.n_factors}</b> &nbsp;·&nbsp; Epochs: <b>20</b></div>
+        <div style="color:var(--muted);font-size:11px">${mf.algorithm}</div>
+      </div>`;
+
+    const ncf = d.models.ncf;
+    const ncfReady = ncf.status === 'ready';
+    $('ncfInfo').innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div>Status: <b style="color:${ncfReady?'var(--green)':'var(--orange)'}">${ncfReady?'✓ Ready':'⚠ '+ncf.status}</b></div>
+        ${ncfReady ? `<div>mf_dim: <b style="color:var(--ncf)">${ncf.mf_dim}</b> &nbsp;·&nbsp; MLP: <b>${(ncf.mlp_layers||[]).join('→')}</b></div>` : ''}
+        <div style="color:var(--muted);font-size:11px">${ncf.algorithm||''}</div>
+      </div>`;
+    $('ncfSideStatus').textContent = ncfReady ? '✓' : '⚠';
+    $('ncfSideStatus').style.color = ncfReady ? 'var(--green)' : 'var(--orange)';
+  } catch(e) { toast('Không thể kết nối server', 't-err'); }
+}
+
+async function loadSampleUsers() {
+  try {
+    const r = await fetch('/users');
+    const d = await r.json();
+    sampleIds = d.sample_user_ids || [];
+    const wrap = $('sampleUsers');
+    wrap.innerHTML = '';
+    sampleIds.forEach(uid => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-ghost';
+      btn.style.cssText = 'padding:5px 13px;font-size:11px';
+      btn.textContent = `User ${uid}`;
+      btn.onclick = () => { $('quickUid').value = uid; quickRec('mf'); };
+      wrap.appendChild(btn);
+    });
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════
+//  Quick recommend (dashboard)
+// ═══════════════════════════════════════════════
+async function quickRec(model) {
+  const uid = parseInt($('quickUid').value);
+  if (!uid) { toast('Nhập User ID', 't-err'); return; }
+  const wrap = $('quickResult');
+  wrap.innerHTML = `<div class="loader" style="padding:20px"><div class="spinner ${model==='ncf'?'ncf-spin':''}"></div></div>`;
+  try {
+    const r = await fetch(`/recommend?user_id=${uid}&n=5&model=${model}`);
+    if (!r.ok) { const e=await r.json(); throw new Error(e.error); }
+    const d = await r.json();
+
+    wrap.innerHTML = `
+      <div style="font-size:11px;color:var(--muted);margin-bottom:10px">
+        <span class="model-label ${model}">${model.toUpperCase()}</span>
+        Top 5 cho <b style="color:var(--text)">User ${uid}</b> · đã xem ${d.n_seen_movies} phim · ${d.inference_ms}ms
+      </div>`;
+
+    d.recommendations.forEach((m,i) => {
+      const _qs=getScore(m,model); const c=scoreColor(_qs,model);
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid var(--border)';
+      div.innerHTML = `
+        <span style="font-family:var(--font-h);font-size:15px;font-weight:800;color:var(--muted2);min-width:18px">${i+1}</span>
+        <span style="font-size:16px">${genreEmoji(m.genres)}</span>
+        <span style="flex:1;font-size:12px;font-weight:500">${shortTitle(m.title,32)}</span>
+        <span style="font-family:var(--font-h);font-size:13px;font-weight:700;color:${c}">${fmtScore(getScore(m,model),model)}</span>`;
+      wrap.appendChild(div);
+    });
+    toast(`${model.toUpperCase()}: gợi ý xong (${d.inference_ms}ms)`, model==='ncf'?'t-ncf':'');
+  } catch(e) {
+    wrap.innerHTML = `<p style="color:#f87171;font-size:12px">⚠ ${e.message}</p>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Full recommendations
+// ═══════════════════════════════════════════════
+function randUser() {
+  if (!sampleIds.length) return;
+  $('recUid').value = sampleIds[Math.floor(Math.random() * sampleIds.length)];
+  doRecommend();
+}
+function randUserCmp() {
+  if (!sampleIds.length) return;
+  $('cmpUid').value = sampleIds[Math.floor(Math.random() * sampleIds.length)];
+  doCompare();
+}
+function randMovie() {
+  const id = Math.floor(Math.random() * 500) + 1;
+  $('simMid').value = id;
+  doSimilar();
+}
+
+async function doRecommend() {
+  const uid = parseInt($('recUid').value);
+  const n   = parseInt($('recN').value) || 10;
+  if (!uid) { toast('Nhập User ID', 't-err'); return; }
+
+  const wrap = $('recResults');
+  wrap.innerHTML = `<div class="loader"><div class="spinner ${recModel==='ncf'?'ncf-spin':''}"></div><span>Đang tính (${recModel.toUpperCase()})...</span></div>`;
+
+  try {
+    const r = await fetch(`/recommend?user_id=${uid}&n=${n}&model=${recModel}`);
+    if (!r.ok) { const e=await r.json(); throw new Error(e.error); }
+    const d = await r.json();
+
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:12px;color:var(--muted)">
+          <span class="model-label ${recModel}">${d.model}</span>
+          <b style="color:var(--text)">${d.n_recommendations}</b> gợi ý cho User <b>${uid}</b>
+          · đã xem ${d.n_seen_movies} phim · <b style="color:var(--green)">${d.inference_ms}ms</b>
+        </div>
+      </div>
+      <div class="movie-grid stagger" id="recGrid"></div>`;
+
+    const grid = $('recGrid');
+    d.recommendations.forEach((m,i) => grid.appendChild(movieCard(m, i+1, recModel)));
+    setTimeout(() => document.querySelectorAll('.score-bar').forEach(b => { b.style.width = b.dataset.w; }), 100);
+    toast(`${d.model}: ${d.n_recommendations} gợi ý (${d.inference_ms}ms)`, recModel==='ncf'?'t-ncf':'');
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚠</div><h3>${e.message}</h3></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Compare MF vs NCF
+// ═══════════════════════════════════════════════
+async function doCompare() {
+  const uid = parseInt($('cmpUid').value);
+  const n   = parseInt($('cmpN').value) || 5;
+  if (!uid) { toast('Nhập User ID', 't-err'); return; }
+
+  const wrap = $('cmpResults');
+  wrap.innerHTML = `<div class="loader"><div class="spinner"></div><span>Đang chạy MF + NCF song song...</span></div>`;
+
+  try {
+    const r = await fetch(`/compare?user_id=${uid}&n=${n}`);
+    if (!r.ok) { const e=await r.json(); throw new Error(e.error); }
+    const d = await r.json();
+
+    const ncfOk = !d.ncf.error && d.ncf.recommendations.length > 0;
+
+    wrap.innerHTML = `
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+        <span style="font-size:12px;color:var(--muted)">User <b style="color:var(--text)">${uid}</b> · đã xem ${d.n_seen} phim</span>
+        <span class="overlap-badge">⇌ Overlap: ${d.overlap}/${n} (${d.overlap_pct}%)</span>
+        ${d.mf.inference_ms!=null?`<span style="font-size:11px;color:var(--mf)">MF: ${d.mf.inference_ms}ms</span>`:''}
+        ${d.ncf.inference_ms!=null?`<span style="font-size:11px;color:var(--ncf)">NCF: ${d.ncf.inference_ms}ms</span>`:''}
+      </div>
+      <div class="compare-cols">
+        <div class="card">
+          <div class="compare-header">
+            <h3 style="color:var(--mf)">✦ Matrix Factorization</h3>
+            <span style="font-size:10px;color:var(--muted)">SGD · k=50</span>
+          </div>
+          <div class="compare-list stagger" id="mfList"></div>
+        </div>
+        <div class="card">
+          <div class="compare-header">
+            <h3 style="color:var(--ncf)">◈ Neural CF (PyTorch)</h3>
+            <span style="font-size:10px;color:var(--muted)">NeuMF · 64→32→16→8</span>
+          </div>
+          <div class="compare-list stagger" id="ncfList"></div>
+        </div>
+      </div>`;
+
+    // MF list
+    const mfList = $('mfList');
+    d.mf.recommendations.forEach((m,i) => {
+      const div = document.createElement('div');
+      div.className = 'compare-item';
+      div.innerHTML = `
+        <div class="ci-rank">${i+1}</div>
+        <div class="ci-emoji">${genreEmoji(m.genres)}</div>
+        <div class="ci-info">
+          <div class="ci-title">${shortTitle(m.title,28)}</div>
+          <div class="ci-genres">${(m.genres||'').split('|').slice(0,2).join(' · ')}</div>
+        </div>
+        <div class="ci-score" style="color:${scoreColor(getScore(m,'mf'),'mf')}">${fmtScore(getScore(m,'mf'),'mf')}</div>`;
+      mfList.appendChild(div);
+    });
+
+    // NCF list
+    const ncfList = $('ncfList');
+    if (ncfOk) {
+      d.ncf.recommendations.forEach((m,i) => {
+        const div = document.createElement('div');
+        div.className = 'compare-item';
+        div.innerHTML = `
+          <div class="ci-rank">${i+1}</div>
+          <div class="ci-emoji">${genreEmoji(m.genres)}</div>
+          <div class="ci-info">
+            <div class="ci-title">${shortTitle(m.title,28)}</div>
+            <div class="ci-genres">${(m.genres||'').split('|').slice(0,2).join(' · ')}</div>
+          </div>
+          <div class="ci-score" style="color:${scoreColor(getScore(m,'ncf'),'ncf')}">${fmtScore(getScore(m,'ncf'),'ncf')}</div>`;
+        ncfList.appendChild(div);
+      });
+    } else {
+      ncfList.innerHTML = `<div style="padding:20px;text-align:center;color:var(--muted);font-size:12px">⚠ ${d.ncf.error || 'NCF chưa sẵn sàng'}</div>`;
+    }
+    toast(`So sánh xong! Overlap: ${d.overlap}/${n}`);
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚠</div><h3>${e.message}</h3></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Similar movies
+// ═══════════════════════════════════════════════
+async function doSimilar() {
+  const mid = parseInt($('simMid').value);
+  const n   = parseInt($('simN').value) || 8;
+  if (!mid) { toast('Nhập Movie ID', 't-err'); return; }
+
+  const wrap = $('simResults');
+  wrap.innerHTML = `<div class="loader"><div class="spinner ${simModel==='ncf'?'ncf-spin':''}"></div><span>Đang tính cosine similarity (${simModel.toUpperCase()})...</span></div>`;
+
+  try {
+    const r = await fetch(`/similar?movie_id=${mid}&n=${n}&model=${simModel}`);
+    if (!r.ok) { const e=await r.json(); throw new Error(e.error); }
+    const d = await r.json();
+
+    const accentColor = simModel==='ncf' ? 'var(--ncf)' : 'var(--mf)';
+    const barColor    = simModel==='ncf' ? 'var(--ncf)' : 'var(--mf)';
+
+    wrap.innerHTML = `
+      <div class="grid-12">
+        <div class="card" style="height:fit-content">
+          <div class="card-title ${simModel==='ncf'?'ncf-bar':''}">Phim gốc</div>
+          <div style="font-size:26px;margin-bottom:10px">${genreEmoji(d.query_genres)}</div>
+          <div style="font-family:var(--font-h);font-size:15px;font-weight:700;margin-bottom:6px">${d.query_title}</div>
+          <div style="font-size:11px;color:var(--muted)">ID: ${d.query_movie_id}</div>
+          <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
+            <span class="model-label ${simModel}">${d.model}</span>
+            <div style="font-size:11px;color:var(--muted);margin-top:8px">
+              ${simModel==='mf'?'Cosine sim trên MF item latent V[i]':'Cosine sim trên NCF GMF item embedding'}
+            </div>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:12px">
+            <b style="color:var(--text)">${d.similar_movies.length}</b> phim tương tự với "<b style="color:var(--text)">${shortTitle(d.query_title,30)}</b>"
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px" class="stagger" id="simList"></div>
+        </div>
+      </div>`;
+
+    const list = $('simList');
+    d.similar_movies.forEach((m,i) => {
+      const pct = Math.round(Math.max(0, m.similarity) * 100);
+      const div = document.createElement('div');
+      div.className = 'sim-item';
+      div.innerHTML = `
+        <div class="sim-rank">${i+1}</div>
+        <span style="font-size:20px">${genreEmoji(m.genres)}</span>
+        <div class="sim-info">
+          <div class="sim-title">${shortTitle(m.title,36)}</div>
+          <div class="sim-genres">${(m.genres||'').split('|').slice(0,3).join(' · ')}</div>
+        </div>
+        <div class="sim-score">
+          <div class="sim-pct" style="color:${accentColor}">${pct}%</div>
+          <div class="sim-bar"><div class="sim-bar-fill" style="width:0%;background:${barColor}" data-w="${pct}%"></div></div>
+        </div>`;
+      list.appendChild(div);
+    });
+    setTimeout(() => document.querySelectorAll('.sim-bar-fill').forEach(b => { b.style.width = b.dataset.w; }), 100);
+    toast(`${d.model}: ${d.similar_movies.length} phim tương tự`, simModel==='ncf'?'t-ncf':'');
+  } catch(e) {
+    wrap.innerHTML = `<div class="empty"><div class="empty-icon">⚠</div><h3>${e.message}</h3></div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  Enter keys
+// ═══════════════════════════════════════════════
+$('quickUid').addEventListener('keydown', e => { if(e.key==='Enter') quickRec(recModel); });
+$('recUid').addEventListener('keydown',   e => { if(e.key==='Enter') doRecommend(); });
+$('cmpUid').addEventListener('keydown',   e => { if(e.key==='Enter') doCompare(); });
+$('simMid').addEventListener('keydown',   e => { if(e.key==='Enter') doSimilar(); });
+
+// ═══════════════════════════════════════════════
+//  Init
+// ═══════════════════════════════════════════════
+loadStats();
+loadSampleUsers();
+setRecModel('mf');
+setSimModel('mf');
+</script>
+</body>
+</html>

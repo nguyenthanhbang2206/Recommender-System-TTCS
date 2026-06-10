@@ -1,0 +1,11 @@
+{
+  "NeuMF (Implicit)": {
+    "HR@10": 0.687,
+    "NDCG@10": 0.41607090539636704,
+    "n_users_evaluated": 1000
+  },
+  "Matrix Factorization (Explicit)": {
+    "RMSE": 0.8881,
+    "MAE": 0.7008
+  }
+}
