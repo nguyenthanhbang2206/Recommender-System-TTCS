@@ -146,13 +146,10 @@ recommender_system/
 ├── saved_models/                # Trống — sinh ra khi chạy train.py
 ├── templates/index.html
 ├── app.py                       # Flask web app
-├── train.py                     # ⭐ Script chính
+├── train.py                     # Script train
 ├── BaoCao_RecommenderSystem_DeepLearning.docx
 └── requirements.txt
 ```
-
-> [!NOTE]
-> Các file cũ liên quan tới EDA và Error Analysis như `utils/visualization.py`, `notebooks/eda_analysis.py`, `notebooks/error_analysis.py`, và `run_eval_fast.py` đã bị loại bỏ để giữ mã nguồn đồng bộ và tinh gọn.
 
 ---
 
