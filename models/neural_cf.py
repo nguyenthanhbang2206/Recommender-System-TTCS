@@ -1,37 +1,10 @@
 """
-Neural Collaborative Filtering — NeuMF (He et al., WWW 2017)
-
-Đúng theo paper:
   - Implicit feedback: label = 1 (observed) / 0 (sampled negative)
   - Loss: Binary Cross-Entropy (log loss)
   - Negative sampling: 4 negatives per positive (paper setting)
   - Output: Sigmoid → [0, 1] (xác suất tương tác)
   - Evaluation: HR@10 + NDCG@10 trên 1 test item + 99 sampled negatives
-  - Pre-training: GMF → MLP → khởi tạo NeuMF (Section 3.4.1)
-
-Kiến trúc NeuMF (Figure 3 trong paper):
-  ┌─────────────────────┐   ┌─────────────────────┐
-  │     GMF Branch      │   │     MLP Branch      │
-  │  User Emb (mf_dim)  │   │  User Emb (mlp_dim) │
-  │  Item Emb (mf_dim)  │   │  Item Emb (mlp_dim) │
-  │  Element-wise ⊙     │   │  Concat → MLP tower │
-  │  (Hadamard product) │   │  ReLU + Dropout     │
-  └──────────┬──────────┘   └──────────┬──────────┘
-             │                          │
-             └──────── Concat ──────────┘
-                     Linear(→1)
-                       Sigmoid → [0,1]
-
-Pre-training (Section 3.4.1):
-  1. Train GMF standalone → lưu gmf_weights
-  2. Train MLP standalone → lưu mlp_weights
-  3. Khởi tạo NeuMF từ gmf_weights + mlp_weights
-  4. Fine-tune NeuMF với SGD (không phải Adam, per paper)
-
-Dropout:
-  Paper gốc không dùng dropout, nhưng với MovieLens 1M (sparsity 95.5%)
-  dropout nhỏ (0.1) trong MLP giúp giảm overfitting quan sát được từ
-  training curves (train BCE tiếp tục giảm trong khi val HR plateau).
+  - Pre-training: GMF → MLP → khởi tạo NeuMF
 """
 import copy
 import random
@@ -103,7 +76,7 @@ if TORCH_AVAILABLE:
 if TORCH_AVAILABLE:
     class GMF(nn.Module):
         """
-        Generalized Matrix Factorization (Section 3.2).
+        Generalized Matrix Factorization.
         Standalone model để pre-train trước khi ghép vào NeuMF.
         """
         def __init__(self, n_users: int, n_items: int, mf_dim: int = 32):
@@ -128,7 +101,7 @@ if TORCH_AVAILABLE:
 if TORCH_AVAILABLE:
     class MLP(nn.Module):
         """
-        MLP model standalone (Section 3.3).
+        MLP model standalone.
         Pre-train trước khi ghép vào NeuMF.
         """
         def __init__(self, n_users, n_items, mlp_layers=None, dropout=0.1):
@@ -169,9 +142,8 @@ if TORCH_AVAILABLE:
 if TORCH_AVAILABLE:
     class NeuMF(nn.Module):
         """
-        NeuMF = GMF branch + MLP branch, concat → output (Figure 3).
+        NeuMF = GMF branch + MLP branch, concat → output.
         Có thể khởi tạo từ pre-trained GMF và MLP weights.
-        Dropout áp dụng trong MLP branch để giảm overfitting.
         """
         def __init__(self, n_users, n_items, mf_dim=32,
                      mlp_layers=None, dropout=0.1):
@@ -215,7 +187,7 @@ if TORCH_AVAILABLE:
         def init_from_pretrained(self, gmf_model: "GMF", mlp_model: "MLP",
                                   alpha: float = 0.5):
             """
-            Khởi tạo NeuMF từ pre-trained GMF và MLP (Section 3.4.1).
+            Khởi tạo NeuMF từ pre-trained GMF và MLP.
             h ← [α * h_GMF, (1-α) * h_MLP] — paper dùng α=0.5.
             """
             # Copy GMF embeddings
@@ -287,8 +259,6 @@ def _train_standalone(model, dataset, n_epochs, batch_size, lr,
 
 class NeuralCF:
     """
-    Wrapper NeuMF theo đúng paper He et al. 2017.
-
     Tính năng:
       - BCE loss (log loss), implicit feedback 0/1
       - Dynamic negative sampling (4 neg/pos, resample mỗi epoch)
@@ -296,14 +266,13 @@ class NeuralCF:
       - Dropout 0.1 trong MLP (giảm overfitting trên sparse data)
       - Early stopping theo Val HR@10 ↑, restore best weights
     """
-
     def __init__(
         self,
         n_users: int,
         n_items: int,
         mf_dim: int = 32,
         mlp_layers: list = None,
-        dropout: float = 0.1,          # 0.1 giảm overfitting trên sparse data
+        dropout: float = 0.1,
         lr: float = 1e-3,
         weight_decay: float = 0.0,
         n_epochs: int = 20,
@@ -313,9 +282,9 @@ class NeuralCF:
         seed: int = 42,
         early_stopping_patience: int = 5,
         min_delta: float = 1e-4,
-        pretrain_epochs: int = 10,     # epochs cho GMF và MLP standalone
-        use_pretrain: bool = True,     # có dùng pre-training không
-        alpha: float = 0.5,           # trade-off GMF vs MLP trong output init
+        pretrain_epochs: int = 10,
+        use_pretrain: bool = True,
+        alpha: float = 0.5,
     ):
         if not TORCH_AVAILABLE:
             raise ImportError("PyTorch chưa được cài. Chạy: pip install torch")
@@ -364,7 +333,7 @@ class NeuralCF:
 
     def _pretrain(self, dataset: "ImplicitDataset", verbose: bool):
         """
-        Section 3.4.1: Pre-train GMF và MLP standalone, sau đó
+        Pre-train GMF và MLP standalone, sau đó
         dùng weights của chúng để khởi tạo NeuMF.
         """
         print(f"\n  [Pre-training] Train GMF ({self.pretrain_epochs} epochs)...")
@@ -381,7 +350,6 @@ class NeuralCF:
         self.model.init_from_pretrained(gmf, mlp, alpha=self.alpha)
 
         # Reset optimizer (Adam momentum không hợp lệ với pre-trained weights)
-        # Paper dùng vanilla SGD để fine-tune sau pre-training
         self.optimizer = optim.SGD(
             self.model.parameters(),
             lr=self.lr * 0.1,   # lr nhỏ hơn cho fine-tuning
@@ -433,7 +401,6 @@ class NeuralCF:
             train_df    : DataFrame [user_idx, item_idx, label=1]
             interacted  : {user_idx: set(item_idx)} từ train
             val_eval_fn : callable() → {"HR@10": float, "NDCG@10": float}
-            verbose     : in tiến độ
         """
         pos_users = train_df["user_idx"].values.astype(int)
         pos_items = train_df["item_idx"].values.astype(int)

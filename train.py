@@ -1,5 +1,5 @@
 """
-Train & Evaluate Recommender System theo paper NCF (He et al. 2017).
+Train & Evaluate Recommender System.
 
 Sử dụng:
     python train.py --model ncf         # NeuMF với implicit feedback (đúng paper)
@@ -169,7 +169,7 @@ def train_ncf(train_df, val_df, test_df, n_users, n_items,
 
     ncf.fit(train_df, interacted, val_eval_fn=val_eval, verbose=True)
 
-    # Đánh giá trên test set (đúng chuẩn paper: 1 positive + 99 negatives)
+    # Đánh giá trên test set (1 positive + 99 negatives)
     print(f"\n  Đánh giá trên Test set ({args.topk_eval} users)...")
     test_subset = test_df.sample(
         min(args.topk_eval, len(test_df)), random_state=args.seed
