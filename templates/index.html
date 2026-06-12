@@ -591,7 +591,6 @@ body::before {
               <th>Loại dữ liệu (Feedback)</th>
               <th>Loss Function</th>
               <th>Metric đánh giá</th>
-              <th>Giá trị kì vọng</th>
               <th>Tốc độ suy luận</th>
             </tr>
           </thead>
@@ -601,7 +600,6 @@ body::before {
               <td style="color:var(--muted);font-size:12px">Explicit (Rating 1-5)</td>
               <td>Mean Squared Error (MSE)</td>
               <td>RMSE, MAE</td>
-              <td><b style="color:var(--mf)">RMSE ~0.88, MAE ~0.68</b></td>
               <td style="color:var(--green)">Cực nhanh (~0.1ms)</td>
             </tr>
             <tr>
@@ -609,7 +607,6 @@ body::before {
               <td style="color:var(--muted);font-size:12px">Implicit (Tương tác 0/1)</td>
               <td>Binary Cross-Entropy (BCE)</td>
               <td>HR@10, NDCG@10</td>
-              <td><b style="color:var(--ncf)">HR@10 ~0.70, NDCG@10 ~0.42</b></td>
               <td style="color:var(--orange)">Trung bình (~5-20ms)</td>
             </tr>
           </tbody>

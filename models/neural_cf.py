@@ -440,7 +440,6 @@ class NeuralCF:
         dataset   = ImplicitDataset(pos_users, pos_items,
                                     self.n_items, interacted, self.n_neg)
 
-        # Pre-training (Section 3.4.1)
         if self.use_pretrain:
             self._pretrain(dataset, verbose=False)
 

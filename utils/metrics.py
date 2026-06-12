@@ -1,15 +1,4 @@
-"""
-Metrics đánh giá theo paper NCF (He et al. 2017):
 
-  Implicit feedback evaluation (chuẩn paper):
-    - leave-one-out: test item là interaction mới nhất của mỗi user
-    - 100 negative samples + 1 test item → rank trong 101 items
-    - HR@K  : Hit Ratio — test item có trong top-K không?
-    - NDCG@K: Normalized DCG — vị trí của test item trong top-K
-
-  Explicit feedback (MF baseline):
-    - RMSE, MAE
-"""
 import numpy as np
 import pandas as pd
 
@@ -27,23 +16,14 @@ def mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 
 
 # ═══════════════════════════════════════════════════════════
-#  Implicit feedback metrics (NCF — đúng paper)
+#  Implicit feedback metrics (NCF)
 # ═══════════════════════════════════════════════════════════
 
 def hit_ratio_at_k(ranked_items: list, test_item: int, k: int) -> float:
-    """
-    HR@K: 1.0 nếu test_item xuất hiện trong top-K, ngược lại 0.0.
-    (Đây là metric chính trong paper NCF)
-    """
     return 1.0 if test_item in ranked_items[:k] else 0.0
 
 
 def ndcg_at_k(ranked_items: list, test_item: int, k: int) -> float:
-    """
-    NDCG@K: log2(2) / log2(pos+2) nếu test_item trong top-K.
-    Với leave-one-out chỉ có 1 relevant item nên IDCG = 1.
-    (Metric chính thứ hai trong paper NCF)
-    """
     if test_item in ranked_items[:k]:
         pos = ranked_items[:k].index(test_item)  # vị trí 0-based
         return 1.0 / np.log2(pos + 2)            # log2(1+1)=1 → NDCG=1 nếu rank 1
@@ -59,21 +39,9 @@ def evaluate_implicit(
     seed: int = 42,
 ) -> dict:
     """
-    Đánh giá implicit recommendation theo chuẩn paper NCF:
       - Với mỗi user: lấy 1 test item (positive) + n_neg negative items
       - Score tất cả 1 + n_neg items bằng model
       - Rank → tính HR@K và NDCG@K
-
-    Args:
-        model_score_fn : callable(users_arr, items_arr) → scores_arr
-                         Nhận 2 numpy arrays shape (N,), trả về (N,) scores
-        test_df        : DataFrame với cột [user_idx, item_idx]
-                         Mỗi hàng là 1 positive test interaction (leave-one-out)
-        negative_pool  : dict {user_idx: [item_idx, ...]} — items chưa tương tác
-        n_neg          : số negative mẫu per user (paper dùng 99 → total 100)
-        k              : cutoff (paper dùng 10)
-        seed           : random seed cho reproducibility
-
     Returns:
         dict với HR@K, NDCG@K, và số user được đánh giá
     """

@@ -1,9 +1,7 @@
 """
-Tiền xử lý dữ liệu cho NCF theo paper He et al. 2017.
-
 Hai chế độ:
-  - Implicit feedback (mặc định): convert rating → 0/1, leave-one-out split
-  - Explicit feedback (legacy):   giữ rating 1-5, random/time split
+  - Implicit feedback: convert rating → 0/1, leave-one-out split
+  - Explicit feedback:   giữ rating 1-5, random/time split
 """
 import numpy as np
 import pandas as pd
@@ -15,18 +13,6 @@ from scipy.sparse import csr_matrix
 # ═══════════════════════════════════════════════════════════
 
 def encode_ids(ratings: pd.DataFrame):
-    """
-    Map userId và movieId về 0-based index liên tục.
-
-    Returns:
-        df          : DataFrame với cột user_idx, item_idx thay thế userId, movieId
-        user2idx    : dict {userId: user_idx}
-        item2idx    : dict {movieId: item_idx}
-        idx2user    : dict {user_idx: userId}
-        idx2item    : dict {item_idx: movieId}
-        n_users     : số user duy nhất
-        n_items     : số item duy nhất
-    """
     user2idx = {u: i for i, u in enumerate(sorted(ratings["userId"].unique()))}
     item2idx = {m: i for i, m in enumerate(sorted(ratings["movieId"].unique()))}
     idx2user = {v: k for k, v in user2idx.items()}
@@ -47,17 +33,6 @@ def encode_ids(ratings: pd.DataFrame):
 # ═══════════════════════════════════════════════════════════
 
 def leave_one_out_split(df: pd.DataFrame):
-    """
-    Leave-one-out split theo paper He et al. 2017:
-      - Test  : interaction MỚI NHẤT (theo timestamp) của mỗi user
-      - Val   : interaction mới nhất thứ 2 của mỗi user
-      - Train : tất cả còn lại
-
-    Returns:
-        train_df : DataFrame implicit interactions cho train
-        val_df   : DataFrame 1 interaction/user cho val
-        test_df  : DataFrame 1 interaction/user cho test
-    """
     df = df.sort_values(["user_idx", "timestamp"]).copy()
 
     test_rows  = df.groupby("user_idx").tail(1).index
@@ -76,11 +51,6 @@ def leave_one_out_split(df: pd.DataFrame):
 
 
 def convert_to_implicit(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Theo paper: convert explicit rating → implicit feedback.
-    Mọi interaction đã quan sát đều có label = 1.
-    (Negative samples được tạo động trong quá trình training)
-    """
     df = df.copy()
     df["label"] = 1
     return df
@@ -90,15 +60,8 @@ def build_negative_pool(train_df: pd.DataFrame, n_users: int, n_items: int,
                         extra_dfs: list = None):
     """
     Tạo tập negative candidates cho mỗi user.
-
     negative_pool[u] = items user u CHƯA tương tác trong TOÀN BỘ data
                        (train + val + test) để tránh sample nhầm test item.
-
-    Args:
-        train_df   : DataFrame training interactions
-        n_users    : số users
-        n_items    : số items
-        extra_dfs  : list DataFrame cần exclude thêm (val_df, test_df)
     """
     all_dfs  = [train_df] + (extra_dfs or [])
     combined = pd.concat(all_dfs, ignore_index=True)
@@ -122,7 +85,7 @@ def build_negative_pool(train_df: pd.DataFrame, n_users: int, n_items: int,
 
 
 # ═══════════════════════════════════════════════════════════
-#  EXPLICIT — Random / Time-based split (legacy, dùng cho MF baseline)
+#  EXPLICIT — Random / Time-based split (dùng cho MF)
 # ═══════════════════════════════════════════════════════════
 
 def split_data(df: pd.DataFrame, test_size: float = 0.2, random_state: int = 42):
@@ -157,7 +120,6 @@ def build_user_item_matrix(df: pd.DataFrame, n_users: int, n_items: int) -> csr_
 
 
 def get_statistics(ratings: pd.DataFrame, movies: pd.DataFrame):
-    """In thống kê tổng quan dataset."""
     print(f"  Dataset: {len(ratings):,} ratings | "
           f"{ratings['userId'].nunique():,} users | "
           f"{ratings['movieId'].nunique():,} items")

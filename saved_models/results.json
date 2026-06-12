@@ -1,7 +1,7 @@
 {
   "NeuMF (Implicit)": {
-    "HR@10": 0.687,
-    "NDCG@10": 0.41607090539636704,
+    "HR@10": 0.683,
+    "NDCG@10": 0.416011977995653,
     "n_users_evaluated": 1000
   },
   "Matrix Factorization (Explicit)": {

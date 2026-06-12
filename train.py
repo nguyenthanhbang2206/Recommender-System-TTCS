@@ -295,7 +295,7 @@ def main():
 
     # ── 3. Split ──────────────────────────────────────────────
     print("\n" + "="*55)
-    print("  BƯỚC 4 — Chia tập dữ liệu")
+    print("  BƯỚC 3 — Chia tập dữ liệu")
     print("="*55)
 
     # Implicit: leave-one-out (cho NCF)
@@ -308,9 +308,9 @@ def main():
     train_expl, temp_expl = split_data(df, test_size=0.3, random_state=args.seed)
     val_expl, test_expl   = split_data(temp_expl, test_size=0.5, random_state=args.seed)
 
-    # ── 5. Train ──────────────────────────────────────────────
+    # ── 4. Train ──────────────────────────────────────────────
     print("\n" + "="*55)
-    print("  BƯỚC 5 — Huấn luyện")
+    print("  BƯỚC 4 — Huấn luyện")
     print("="*55)
 
     all_results = {}
@@ -330,9 +330,9 @@ def main():
         )
         all_results["Matrix Factorization (Explicit)"] = mf_res
 
-    # ── 6. Lưu kết quả ────────────────────────────────────────
+    # ── 5. Lưu kết quả ────────────────────────────────────────
     print("\n" + "="*55)
-    print("  BƯỚC 6 — Lưu kết quả & biểu đồ")
+    print("  BƯỚC 5 — Lưu kết quả & biểu đồ")
     print("="*55)
 
     with open(os.path.join(OUTDIR, "results.json"), "w", encoding="utf-8") as f:
@@ -361,7 +361,7 @@ def main():
 
 
 
-    # ── 7. Tổng kết ───────────────────────────────────────────
+    # ── 6. Tổng kết ───────────────────────────────────────────
     print("\n" + "="*55)
     print("  KẾT QUẢ CUỐI CÙNG")
     print("="*55)

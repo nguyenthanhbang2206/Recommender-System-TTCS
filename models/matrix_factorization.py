@@ -1,10 +1,7 @@
 """
 Matrix Factorization (MF) sử dụng Stochastic Gradient Descent (SGD)
-Đây là thuật toán lọc cộng tác cổ điển và hiệu quả.
-
 Mô hình:
     R_hat[u, i] = mu + b_u + b_i + U[u] · V[i]^T
-
 Trong đó:
     - mu   : rating trung bình toàn cục
     - b_u  : bias của user u
@@ -31,16 +28,6 @@ class MatrixFactorizationSGD:
         n_epochs: int = 20,
         random_state: int = 42,
     ):
-        """
-        Args:
-            n_users    : số lượng người dùng
-            n_items    : số lượng sản phẩm/phim
-            n_factors  : số chiều ẩn (latent factors)
-            lr         : learning rate
-            reg        : hệ số L2 regularization
-            n_epochs   : số epoch huấn luyện
-            random_state: seed ngẫu nhiên
-        """
         self.n_users = n_users
         self.n_items = n_items
         self.n_factors = n_factors
@@ -140,17 +127,6 @@ class MatrixFactorizationSGD:
         return np.clip(preds, 1.0, 5.0)
 
     def recommend(self, user_idx: int, n: int = 10, exclude_seen: set = None) -> list:
-        """
-        Gợi ý top-N sản phẩm cho một user.
-
-        Args:
-            user_idx    : chỉ số người dùng
-            n           : số lượng gợi ý
-            exclude_seen: tập item_idx đã tương tác (sẽ loại khỏi gợi ý)
-
-        Returns:
-            Danh sách (item_idx, predicted_rating) sắp xếp giảm dần theo rating dự đoán
-        """
         scores = (
             self.global_mean
             + self.b_u[user_idx]
@@ -166,14 +142,12 @@ class MatrixFactorizationSGD:
         return [(int(i), float(scores[i])) for i in top_indices]
 
     def _compute_rmse(self, data: np.ndarray) -> float:
-        """Tính RMSE trên một tập dữ liệu"""
         pairs = data[:, :2]
         y_true = data[:, 2]
         y_pred = self.predict_batch(pairs)
         return float(np.sqrt(np.mean((y_true - y_pred) ** 2)))
 
     def save(self, path: str):
-        """Lưu tham số mô hình"""
         np.savez(
             path,
             U=self.U, V=self.V,
@@ -185,7 +159,6 @@ class MatrixFactorizationSGD:
 
     @classmethod
     def load(cls, path: str) -> "MatrixFactorizationSGD":
-        """Tải mô hình đã lưu"""
         data = np.load(path + ".npz")
         config = data["config"].astype(int)
         model = cls(n_users=config[0], n_items=config[1], n_factors=config[2])
